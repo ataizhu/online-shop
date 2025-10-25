@@ -50,8 +50,28 @@ class SetCurrency {
     ];
 
     public function handle(Request $request, Closure $next) {
-        if (!session()->has('currency_code') && !auth()->check()) {
+        $shouldDetect = false;
+
+        if (auth()->check()) {
+            if (!auth()->user()->currency_id) {
+                $shouldDetect = true;
+            }
+        } else {
+            if (!session()->has('currency_code')) {
+                $shouldDetect = true;
+            }
+        }
+
+        if ($shouldDetect) {
             $currencyCode = $this->detectCurrencyByIp($request->ip());
+
+            if (auth()->check()) {
+                $currency = Currency::where('code', $currencyCode)->where('status', 1)->first();
+                if ($currency) {
+                    auth()->user()->update(['currency_id' => $currency->id]);
+                }
+            }
+
             session(['currency_code' => $currencyCode]);
         }
 
