@@ -52,16 +52,16 @@ quantities in the Cart) --}}
                                 the price before (the original price) and after (the new price) the discount --}}
                                 <div class="price-template">
                                     <div class="item-new-price">
-                                        EGP{{ $getDiscountAttributePrice['final_price'] }}
+                                        {{ formatPrice($getDiscountAttributePrice['final_price']) }}
                                     </div>
                                     <div class="item-old-price" style="margin-left: -40px">
-                                        EGP{{ $getDiscountAttributePrice['product_price'] }}
+                                        {{ formatPrice($getDiscountAttributePrice['product_price']) }}
                                     </div>
                                 </div>
                             @else {{-- if there's no discount on the price, show the original price --}}
                                 <div class="price-template">
                                     <div class="item-new-price">
-                                        EGP{{ $getDiscountAttributePrice['final_price'] }}
+                                        {{ formatPrice($getDiscountAttributePrice['final_price']) }}
                                     </div>
                                 </div>
                             @endif
@@ -87,7 +87,7 @@ quantities in the Cart) --}}
                     </td>
                     <td>
                         <div class="cart-price">
-                            EGP{{ $getDiscountAttributePrice['final_price'] * $item['quantity'] }} {{-- price of all
+                            {{ formatPrice($getDiscountAttributePrice['final_price'] * $item['quantity']) }} {{-- price of all
                             products (after discount (if any)) (= price (after discoutn) * no. of products) --}}
                         </div>
                     </td>
@@ -141,7 +141,7 @@ http://publicvoidlife.blogspot.com/2014/03/on-on-or-event-delegation-explained.h
                         discounts --}}
                     </td>
                     <td>
-                        <span class="calc-text">EGP{{ $total_price }}</span>
+                        <span class="calc-text">{{ formatPrice($total_price, false) }}</span>
                     </td>
                 </tr>
                 <tr>
@@ -155,9 +155,9 @@ http://publicvoidlife.blogspot.com/2014/03/on-on-or-event-delegation-explained.h
                             @if (\Illuminate\Support\Facades\Session::has('couponAmount')) {{-- We stored the
                                 'couponAmount' in a Session Variable inside the applyCoupon() method in
                                 Front/ProductsController.php --}}
-                                EGP{{ \Illuminate\Support\Facades\Session::get('couponAmount') }}
+                                {{ getCurrencySymbol() }} {{ formatPrice(\Illuminate\Support\Facades\Session::get('couponAmount'), false) }}
                             @else
-                                EGP0
+                                {{ getCurrencySymbol() }} 0
                             @endif
                         </span>
                     </td>

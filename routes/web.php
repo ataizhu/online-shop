@@ -18,6 +18,9 @@ require __DIR__ . '/auth.php';
 // Language Switcher Route
 Route::get('lang/{lang}', 'App\Http\Controllers\LanguageController@switchLang')->name('lang.switch');
 
+// Currency Switcher Route
+Route::post('currency/switch', 'App\Http\Controllers\CurrencyController@switchCurrency')->name('currency.switch');
+
 // Note: OUR WEBSITE WILL HAVE TWO MAJOR SECTIONS: ADMIN ROUTES (for the Admin Panel) & FRONT ROUTES (for the Frontend section routes)!:
 
 // First: Admin Panel routes:

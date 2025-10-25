@@ -124,7 +124,7 @@
                                                             <span class="order-span-quantity">x {{ $item['quantity'] }}</span>
                                                         </td>
                                                         <td>
-                                                            <h6 class="order-h6">EGP{{ $getDiscountAttributePrice['final_price'] * $item['quantity'] }}</h6> {{-- price of all products (after discount (if any)) (= price (after discoutn) * no. of products) --}}
+                                                            <h6 class="order-h6">{{ formatPrice($getDiscountAttributePrice['final_price'] * $item['quantity']) }}</h6> {{-- price of all products (after discount (if any)) (= price (after discoutn) * no. of products) --}}
                                                         </td>
                                                     </tr>
 
@@ -140,7 +140,7 @@
                                                         <h3 class="order-h3">Subtotal</h3>
                                                     </td>
                                                     <td>
-                                                        <h3 class="order-h3">EGP{{ $total_price }}</h3>
+                                                        <h3 class="order-h3">{{ formatPrice($total_price, false) }}</h3>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -149,7 +149,7 @@
                                                     </td>
                                                     <td>
                                                         <h6 class="order-h6">
-                                                            <span class="shipping_charges">EGP0</span>
+                                                            <span class="shipping_charges">{{ getCurrencySymbol() }} 0</span>
                                                         </h6>
                                                     </td>
                                                 </tr>
@@ -161,9 +161,9 @@
                                                         <h6 class="order-h6">
                                                             
                                                             @if (\Illuminate\Support\Facades\Session::has('couponAmount')) {{-- We stored the 'couponAmount' in a Session Variable inside the applyCoupon() method in Front/ProductsController.php --}}
-                                                                <span class="couponAmount">EGP{{ \Illuminate\Support\Facades\Session::get('couponAmount') }}</span>
+                                                                <span class="couponAmount">{{ getCurrencySymbol() }} {{ formatPrice(\Illuminate\Support\Facades\Session::get('couponAmount'), false) }}</span>
                                                             @else
-                                                                EGP0
+                                                                {{ getCurrencySymbol() }} 0
                                                             @endif
                                                         </h6>
                                                     </td>

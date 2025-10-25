@@ -37,7 +37,8 @@
         },
         "files": [
             "app/Helpers/Helper.php",
-            "app/Helpers/TranslationHelper.php"
+            "app/Helpers/TranslationHelper.php",
+            "app/Helpers/CurrencyHelper.php"
         ]
     },
     "autoload-dev": {

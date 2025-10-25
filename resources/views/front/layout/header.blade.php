@@ -108,16 +108,22 @@ $sections = \App\Models\Section::sections();
                         </ul>
                     </li>
                     <li>
-                        <a>EGP
+                        <a>{{ getCurrentCurrency()->code ?? 'CHF' }}
                             <i class="fas fa-chevron-down u-s-m-l-9"></i>
                         </a>
                         <ul class="g-dropdown" style="width:90px">
+                            @foreach(getActiveCurrencies() as $currency)
                             <li>
-                                <a href="#" class="u-c-brand">LE EGP</a>
+                                <a href="javascript:void(0)" 
+                                   class="currency-switcher {{ (getCurrentCurrency()->code ?? 'CHF') === $currency->code ? 'u-c-brand' : '' }}" 
+                                   data-currency="{{ $currency->code }}">
+                                    @if($currency->symbol !== $currency->code)
+                                        {{ $currency->symbol }}
+                                    @endif
+                                    {{ $currency->code }}
+                                </a>
                             </li>
-                            <li>
-                                <a href="#">($) USD</a>
-                            </li>
+                            @endforeach
                         </ul>
                     </li>
                     <li>

@@ -31,7 +31,7 @@ front/layout/header.blade.php to here --}}
                         <img src="{{ asset('front/images/product_images/small/' . $item['product']['product_image']) }}"
                             alt="Product">
                         <span class="mini-item-name">{{ $item['product']['product_name'] }}</span>
-                        <span class="mini-item-price">EGP{{ $getDiscountAttributePrice['final_price'] }}</span>
+                        <span class="mini-item-price">{{ formatPrice($getDiscountAttributePrice['final_price']) }}</span>
                         <span class="mini-item-quantity"> x {{ $item['quantity'] }} </span>
                     </a>
                 </li>
@@ -44,7 +44,7 @@ front/layout/header.blade.php to here --}}
         </ul>
         <div class="mini-shop-total clearfix">
             <span class="mini-total-heading float-left">{{ __('site.total') }}:</span>
-            <span class="mini-total-price float-right">EGP{{ $total_price }}</span>
+            <span class="mini-total-price float-right">{{ formatPrice($total_price) }}</span>
         </div>
         <div class="mini-action-anchors">
             <a href="{{ url('cart') }}" class="cart-anchor">{{ __('site.view_cart') }}</a>
