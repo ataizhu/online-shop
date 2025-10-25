@@ -10,14 +10,14 @@
     <div class="page-style-a">
         <div class="container">
             <div class="page-intro">
-                <h2>My Orders</h2>
+                <h2>{{ __('site.my_orders') }}</h2>
                 <ul class="bread-crumb">
                     <li class="has-separator">
                         <i class="ion ion-md-home"></i>
-                        <a href="index.html">Home</a>
+                        <a href="index.html">{{ __('site.home') }}</a>
                     </li>
                     <li class="is-marked">
-                        <a href="#">Orders</a>
+                        <a href="#">{{ __('site.orders') }}</a>
                     </li>
                 </ul>
             </div>
@@ -30,10 +30,10 @@
             <div class="row">
                 <table class="table table-striped table-borderless">
                     <tr class="table-danger">
-                        <th>Order ID</th>
-                        <th>Ordered Products</th> {{-- We'll display products codes --}}
+                        <th>{{ __('site.order_id') }}</th>
+                        <th>{{ __('site.ordered_products') }}</th> {{-- We'll display products codes --}}
                         <th>Payment Method</th>
-                        <th>Grand Total</th>
+                        <th>{{ __('site.grand_total') }}</th>
                         <th>Created on</th>
                         @foreach ($orders as $order)
                             <tr>

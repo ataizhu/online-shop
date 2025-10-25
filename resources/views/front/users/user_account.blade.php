@@ -7,14 +7,14 @@
     <div class="page-style-a">
         <div class="container">
             <div class="page-intro">
-                <h2>My Account</h2>
+                <h2>{{ __('site.my_account') }}</h2>
                 <ul class="bread-crumb">
                     <li class="has-separator">
                         <i class="ion ion-md-home"></i>
-                        <a href="index.html">Home</a>
+                        <a href="index.html">{{ __('site.home') }}</a>
                     </li>
                     <li class="is-marked">
-                        <a href="account.html">Account</a>
+                        <a href="account.html">{{ __('site.account') }}</a>
                     </li>
                 </ul>
             </div>
@@ -64,7 +64,7 @@
                 <!-- Update User Account Contact Details -->
                 <div class="col-lg-6">
                     <div class="login-wrapper">
-                        <h2 class="account-h2 u-s-m-b-20" style="font-size: 18px">Update Contact Details</h2>
+                        <h2 class="account-h2 u-s-m-b-20" style="font-size: 18px">{{ __('site.update_contact_details') }}</h2>
 
 
                         

@@ -7,14 +7,14 @@
     <div class="page-style-a">
         <div class="container">
             <div class="page-intro">
-                <h2>Contact Us</h2>
+                <h2>{{ __('site.contact_us') }}</h2>
                 <ul class="bread-crumb">
                     <li class="has-separator">
                         <i class="ion ion-md-home"></i>
                         <a href="index.html">Home</a>
                     </li>
                     <li class="is-marked">
-                        <a href="contact.html">Contact Us</a>
+                        <a href="contact.html">{{ __('site.contact_us') }}</a>
                     </li>
                 </ul>
             </div>
@@ -27,7 +27,7 @@
             <div class="row">
                 <div class="col-lg-6 col-md-6 col-sm-12">
                     <div class="touch-wrapper">
-                        <h1 class="contact-h1">Get In Touch With Us</h1>
+                        <h1 class="contact-h1">{{ __('site.get_in_touch') }}</h1>
 
 
                         {{-- Displaying Laravel Validation Errors: https://laravel.com/docs/9.x/validation#quick-displaying-the-validation-errors --}}    
@@ -117,7 +117,7 @@
                         </p>
                     </div>
                     <div class="contact-us-wrapper">
-                        <h1 class="contact-h1">Contact Us</h1>
+                        <h1 class="contact-h1">{{ __('site.contact_us') }}</h1>
                         <div class="contact-material u-s-m-b-16">
                             <h6>Location</h6>
                             <span>10 Salah Salem St.</span>

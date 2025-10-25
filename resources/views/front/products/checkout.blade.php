@@ -11,7 +11,7 @@
                 <ul class="bread-crumb">
                     <li class="has-separator">
                         <i class="ion ion-md-home"></i>
-                        <a href="index.html">Home</a>
+                        <a href="index.html">{{ __('site.home') }}</a>
                     </li>
                     <li class="is-marked">
                         <a href="checkout.html">Checkout</a>
@@ -71,7 +71,7 @@
                                     
                                     @if (count($deliveryAddresses) > 0) {{-- Checking if there are any $deliveryAddreses for the currently authenticated/logged-in user --}} {{-- $deliveryAddresses variable is passed in from checkout() method in Front/ProductsController.php --}}
 
-                                        <h4 class="section-h4">Delivery Addresses</h4>
+                                        <h4 class="section-h4">{{ __('site.delivery_addresses') }}</h4>
 
                                         @foreach ($deliveryAddresses as $address)
                                             <div class="control-group" style="float: left; margin-right: 5px">
@@ -82,8 +82,8 @@
                                                 <label class="control-label" for="address{{ $address['id'] }}">
                                                     {{ $address['name'] }}, {{ $address['address'] }}, {{ $address['city'] }}, {{ $address['state'] }}, {{ $address['country'] }} ({{ $address['mobile'] }})
                                                 </label>
-                                                <a href="javascript:;" data-addressid="{{ $address['id'] }}" class="removeAddress" style="float: right; margin-left: 10px">Remove</a> {{-- We used href="javascript:;" to prevent the <a> link from being clickable (to make the <a> unclickable) (stop the <a> function or action) because we'll use jQuery AJAX to click this link, check front/js/custom.js --}} {{-- We use the class="removeAddress" as a handle for the AJAX request in front/js/custom.js --}}
-                                                <a href="javascript:;" data-addressid="{{ $address['id'] }}" class="editAddress"   style="float: right"                   >Edit</a>   {{-- We used href="javascript:;" to prevent the <a> link from being clickable (to make the <a> unclickable) (stop the <a> function or action) because we'll use jQuery AJAX to click this link, check front/js/custom.js --}} {{-- We use the class="editAddress" as a handle for the AJAX request in front/js/custom.js --}}
+                                                <a href="javascript:;" data-addressid="{{ $address['id'] }}" class="removeAddress" style="float: right; margin-left: 10px">{{ __('site.remove') }}</a> {{-- We used href="javascript:;" to prevent the <a> link from being clickable (to make the <a> unclickable) (stop the <a> function or action) because we'll use jQuery AJAX to click this link, check front/js/custom.js --}} {{-- We use the class="removeAddress" as a handle for the AJAX request in front/js/custom.js --}}
+                                                <a href="javascript:;" data-addressid="{{ $address['id'] }}" class="editAddress"   style="float: right"                   >{{ __('site.edit') }}</a>   {{-- We used href="javascript:;" to prevent the <a> link from being clickable (to make the <a> unclickable) (stop the <a> function or action) because we'll use jQuery AJAX to click this link, check front/js/custom.js --}} {{-- We use the class="editAddress" as a handle for the AJAX request in front/js/custom.js --}}
                                             </div>
                                         @endforeach
                                         <br>
@@ -145,7 +145,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td>
-                                                        <h6 class="order-h6">Shipping Charges</h6>
+                                                        <h6 class="order-h6">{{ __('site.shipping_charges') }}</h6>
                                                     </td>
                                                     <td>
                                                         <h6 class="order-h6">
@@ -184,7 +184,7 @@
                                         </table>
                                         <div class="u-s-m-b-13 codMethod"> {{-- We added the codMethod CSS class to disable that payment method (check front/js/custom.js) if the PIN code of that user's Delivery Address doesn't exist in our `cod_pincodes` database table --}}
                                             <input type="radio" class="radio-box" name="payment_gateway" id="cash-on-delivery" value="COD">
-                                            <label class="label-text" for="cash-on-delivery">Cash on Delivery</label>
+                                            <label class="label-text" for="cash-on-delivery">{{ __('site.cash_on_delivery') }}</label>
                                         </div>
                                         <div class="u-s-m-b-13 prepaidMethod"> {{-- We added the prepaidMethod CSS class to disable that payment method (check front/js/custom.js) if the PIN code of that user's Delivery Address doesn't exist in our `prepaid_pincodes` database table --}}
                                             <input type="radio" class="radio-box" name="payment_gateway" id="paypal" value="Paypal">

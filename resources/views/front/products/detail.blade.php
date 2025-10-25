@@ -57,7 +57,7 @@
                 <ul class="bread-crumb">
                     <li class="has-separator">
                         <i class="ion ion-md-home"></i>
-                        <a href="{{ url('/') }}">Home</a>
+                        <a href="{{ url('/') }}">{{ __('site.home') }}</a>
                     </li>
                     <li class="is-marked">
                         <a href="javascript:;">Detail</a>
@@ -167,7 +167,7 @@
                             {{-- Breadcrumb --}}
                             <ul class="bread-crumb">
                                 <li class="has-separator">
-                                    <a href="{{ url('/') }}">Home</a> {{-- Home --}}
+                                    <a href="{{ url('/') }}">{{ __('site.home') }}</a> {{-- Home --}}
                                 </li>
                                 <li class="has-separator">
                                     <a href="javascript:;">{{ $productDetails['section']['name'] }}</a> {{-- Section Name --}}
@@ -201,7 +201,7 @@
                             </div>
                         </div>
                         <div class="section-2-short-description u-s-p-y-14">
-                            <h6 class="information-heading u-s-m-b-8">Description:</h6>
+                            <h6 class="information-heading u-s-m-b-8">{{ __('site.description') }}:/h6>
                             <p>{{ $productDetails['description'] }}</p>
                         </div>
                         <div class="section-3-price-original-discount u-s-p-y-14">
@@ -217,7 +217,7 @@
                                         <h4>EGP{{ $getDiscountPrice }}</h4>
                                     </div>
                                     <div class="original-price">
-                                        <span>Original Price:</span>
+                                        <span>{{ __('site.original_price') }}:/span>
                                         <span>EGP{{ $productDetails['product_price'] }}</span> {{-- the product original price (without discount) --}}
                                     </div>
                                 @else {{-- if there's no discount on the product price --}}
@@ -232,23 +232,23 @@
 
                         </div>
                         <div class="section-4-sku-information u-s-p-y-14">
-                            <h6 class="information-heading u-s-m-b-8">Sku Information:</h6>
+                            <h6 class="information-heading u-s-m-b-8">{{ __('site.sku_information') }}:/h6>
                             <div class="left">
-                                <span>Product Code:</span>
+                                <span>{{ __('site.product_code') }}:/span>
                                 <span>{{ $productDetails['product_code'] }}</span>
                             </div>
                             <div class="left">
-                                <span>Product Color:</span>
+                                <span>{{ __('site.product_color') }}:/span>
                                 <span>{{ $productDetails['product_color'] }}</span>
                             </div>
                             <div class="availability">
-                                <span>Availability:</span>
+                                <span>{{ __('site.availability') }}:/span>
 
 
                                 @if ($totalStock > 0)
-                                    <span>In Stock</span>
+                                    <span>{{ __('site.in_stock') }}</span>
                                 @else
-                                    <span style="color: red">Out of Stock (Sold-out)</span>
+                                    <span style="color: red">{{ __('site.out_of_stock') }}</span>
                                 @endif
 
 

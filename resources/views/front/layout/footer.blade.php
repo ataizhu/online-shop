@@ -19,7 +19,7 @@
             <form class="newsletter-form">
                 <label class="sr-only" for="subscriber_email">Enter your Email</label>
                 <input type="text" placeholder="Your Email Address" id="subscriber_email" name="subscriber_email" required> {{-- We'll use the HTML id Global Attribute in jQuery in front/js/custom.js --}} 
-                <button type="button" class="button" onclick="addSubscriber()">SUBMIT</button> {{-- Check the addSubscriber() function in front/js/custom.js. We'll use it in conjunction with the    id="subscriber_email"    of the <input> field --}}
+                <button type="button" class="button" onclick="addSubscriber()">{{ __('site.submit') }}</button> {{-- Check the addSubscriber() function in front/js/custom.js. We'll use it in conjunction with the    id="subscriber_email"    of the <input> field --}}
             </form>
 
 
@@ -31,13 +31,13 @@
             <div class="row">
                 <div class="col-lg-3 col-md-3 col-sm-12">
                     <div class="footer-list">
-                        <h6>COMPANY</h6>
+                        <h6>{{ __('site.company') }}</h6>
                         <ul>
                             <li>
-                                <a href="{{ url('about-us') }}">About Us</a>
+                                <a href="{{ url('about-us') }}">{{ __('site.about_us') }}</a>
                             </li>
                             <li>
-                                <a href="{{ url('contact') }}">Contact Us</a>
+                                <a href="{{ url('contact') }}">{{ __('site.contact_us') }}</a>
                             </li>
                             <li>
                                 <a href="{{ url('faq') }}">FAQ</a>
@@ -63,13 +63,13 @@
                 </div>
                 <div class="col-lg-3 col-md-3 col-sm-12">
                     <div class="footer-list">
-                        <h6>ACCOUNT</h6>
+                        <h6>{{ __('site.account') }}</h6>
                         <ul>
                             <li>
-                                <a href="{{ url('user/account') }}">My Account</a>
+                                <a href="{{ url('user/account') }}">{{ __('site.my_account') }}</a>
                             </li>
                             <li>
-                                <a href="{{ url('user/orders') }}">My Orders</a>
+                                <a href="{{ url('user/orders') }}">{{ __('site.my_orders') }}</a>
                             </li>
                         </ul>
                     </div>
