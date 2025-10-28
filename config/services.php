@@ -31,4 +31,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'odoo' => [
+        'url' => env('ODOO_URL', 'http://localhost:8069'),
+        'database' => env('ODOO_DATABASE', 'odoo_demo'),
+        'username' => env('ODOO_USERNAME', 'admin@admin.com'),
+        'password' => env('ODOO_PASSWORD', 'admin123'),
+    ],
+
 ];

@@ -10,10 +10,17 @@
                         <div class="card-body">
                             <h4 class="card-title">Products</h4>
 
-
-
-                            
-                            <a href="{{ url('admin/add-edit-product') }}" style="max-width: 150px; float: right; display: inline-block" class="btn btn-block btn-primary">Add Product</a>
+                            <div style="float: right; display: inline-block">
+                                <a href="{{ url('admin/add-edit-product') }}" style="max-width: 150px; display: inline-block; margin-right: 10px" class="btn btn-block btn-primary">Add Product</a>
+                                
+                                <form method="POST" action="{{ url('admin/sync-products-from-odoo') }}" style="display: inline-block">
+                                    @csrf
+                                    <button type="submit" class="btn btn-info" style="max-width: 220px" onclick="return confirm('Импортировать товары из Odoo в каталог сайта?')">
+                                        <i class="mdi mdi-download"></i> Import from Odoo
+                                    </button>
+                                </form>
+                            </div>
+                            <div style="clear: both"></div>
 
                             {{-- Displaying The Validation Errors: https://laravel.com/docs/9.x/validation#quick-displaying-the-validation-errors AND https://laravel.com/docs/9.x/blade#validation-errors --}}
                             {{-- Determining If An Item Exists In The Session (using has() method): https://laravel.com/docs/9.x/session#determining-if-an-item-exists-in-the-session --}}
@@ -21,6 +28,15 @@
                             @if (Session::has('success_message')) <!-- Check AdminController.php, updateAdminPassword() method -->
                                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                                     <strong>Success:</strong> {{ Session::get('success_message') }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            @endif
+
+                            @if (Session::has('error_message'))
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <strong>Error:</strong> {{ Session::get('error_message') }}
                                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                     </button>

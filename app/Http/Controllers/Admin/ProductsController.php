@@ -14,8 +14,7 @@ use App\Models\ProductsFilter;
 use App\Models\ProductsAttribute;
 
 
-class ProductsController extends Controller
-{
+class ProductsController extends Controller {
     public function products() { // render products.blade.php in the Admin Panel
         Session::put('page', 'products');
 
@@ -23,7 +22,7 @@ class ProductsController extends Controller
         // Modify the last $products variable so that ONLY products that BELONG TO the 'vendor' show up in (not ALL products show up) in products.blade.php, and also make sure that the 'vendor' account is active/enabled/approved (`status` is 1) before they can access the products page    
         $adminType = Auth::guard('admin')->user()->type;      // `type`      is the column in `admins` table    // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Retrieving The Authenticated User and getting their `type`      column in `admins` table    // https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
         $vendor_id = Auth::guard('admin')->user()->vendor_id; // `vendor_id` is the column in `admins` table    // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Retrieving The Authenticated User and getting their `vendor_id` column in `admins` table    // https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
-        
+
         if ($adminType == 'vendor') { // if the authenticated user (the logged in user) is 'vendor', check his `status`
             $vendorStatus = Auth::guard('admin')->user()->status; // `status` is the column in `admins` table    // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Retrieving The Authenticated User and getting their `status` column in `admins` table    // https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
             if ($vendorStatus == 0) { // if the 'vendor' is inactive/disabled
@@ -33,10 +32,10 @@ class ProductsController extends Controller
 
         // Get ALL products ($products)
         $products = Product::with([ // Constraining Eager Loads: https://laravel.com/docs/9.x/eloquent-relationships#constraining-eager-loads    // Subquery Where Clauses: https://laravel.com/docs/9.x/queries#subquery-where-clauses    // Advanced Subqueries: https://laravel.com/docs/9.x/eloquent#advanced-subqueries
-            'section' => function($query) { // the 'section' relationship method in Product.php Model
+            'section' => function ($query) { // the 'section' relationship method in Product.php Model
                 $query->select('id', 'name'); // Important Note: It's a MUST to select 'id' even if you don't need it, because the relationship Foreign Key `product_id` depends on it, or else the `product` relationship would give you 'null'!
             },
-            'category' => function($query) { // the 'category' relationship method in Product.php Model
+            'category' => function ($query) { // the 'category' relationship method in Product.php Model
                 $query->select('id', 'category_name'); // Important Note: It's a MUST to select 'id' even if you don't need it, because the relationship Foreign Key `product_id` depends on it, or else the `product` relationship would give you 'null'!
             }
         ]);
@@ -52,7 +51,7 @@ class ProductsController extends Controller
 
         return view('admin.products.products')->with(compact('products')); // render products.blade.php page, and pass $products variable to the view
     }
-    
+
     public function updateProductStatus(Request $request) { // Update Product Status using AJAX in products.blade.php
         if ($request->ajax()) { // if the request is coming via an AJAX call
             $data = $request->all(); // Getting the name/value pairs array that are sent from the AJAX request (AJAX call)
@@ -69,7 +68,7 @@ class ProductsController extends Controller
             // echo '<pre>', var_dump($data), '</pre>';
 
             return response()->json([ // JSON Responses: https://laravel.com/docs/9.x/responses#json-responses
-                'status'     => $status,
+                'status' => $status,
                 'product_id' => $data['product_id']
             ]);
         }
@@ -77,10 +76,294 @@ class ProductsController extends Controller
 
     public function deleteProduct($id) {
         Product::where('id', $id)->delete();
-        
+
         $message = 'Product has been deleted successfully!';
-        
+
         return redirect()->back()->with('success_message', $message);
+    }
+
+    public function syncFromOdoo() {
+        try {
+            $odoo = new \App\Services\OdooService();
+
+            // 1. Получить и синхронизировать категории
+            $odooCategories = $odoo->getCategories();
+            $categoryMapping = $this->syncCategories($odooCategories);
+
+            // 2. Получить товары по шаблонам (с вариантами)
+            $odooTemplates = $odoo->getProductTemplates([['sale_ok', '=', true]]);
+
+            if (empty($odooTemplates)) {
+                return redirect()->back()->with('error_message', 'В Odoo нет товаров для импорта');
+            }
+
+            $imported = 0;
+            $updated = 0;
+            $errors = 0;
+            $imagesImported = 0;
+            $variantsImported = 0;
+            $odooProductCodes = [];
+
+            foreach ($odooTemplates as $template) {
+                try {
+                    // Получить варианты этого товара
+                    $variants = $odoo->getProductVariants($template['product_variant_ids']);
+
+                    if (empty($variants))
+                        continue;
+
+                    // Берем первый вариант как основной товар
+                    $mainVariant = $variants[0];
+                    $productCode = $mainVariant['default_code'] ?? null;
+
+                    // Пропустить если нет кода
+                    if (!$productCode || !is_string($productCode) || strlen($productCode) == 0) {
+                        continue;
+                    }
+
+                    $odooProductCodes[] = $productCode;
+
+                    // Определить категорию
+                    $categoryId = 1;
+                    $sectionId = 1;
+                    if (isset($template['categ_id']) && is_array($template['categ_id'])) {
+                        $odooCategoryId = $template['categ_id'][0];
+                        if (isset($categoryMapping[$odooCategoryId])) {
+                            $categoryId = $categoryMapping[$odooCategoryId]['category_id'];
+                            $sectionId = $categoryMapping[$odooCategoryId]['section_id'];
+                        }
+                    }
+
+                    // Проверить существует ли товар
+                    $laravelProduct = Product::where('product_code', $productCode)->first();
+
+                    if (!$laravelProduct) {
+                        // Создать новый товар
+                        $laravelProduct = new Product();
+                        $laravelProduct->section_id = $sectionId;
+                        $laravelProduct->category_id = $categoryId;
+                        $laravelProduct->brand_id = 1;
+                        $laravelProduct->vendor_id = 0;
+                        $laravelProduct->admin_id = Auth::guard('admin')->user()->id ?? 1;
+                        $laravelProduct->admin_type = Auth::guard('admin')->user()->type ?? 'superadmin';
+                        $laravelProduct->product_code = $productCode;
+                        $laravelProduct->product_color = 'N/A';
+                        $laravelProduct->product_discount = 0;
+                        $laravelProduct->product_weight = 0;
+                        $laravelProduct->is_featured = 'No';
+                        $laravelProduct->is_bestseller = 'No';
+                        $laravelProduct->status = 1;
+                        $imported++;
+                    } else {
+                        $updated++;
+                    }
+
+                    // Обновить данные товара
+                    $laravelProduct->product_name = $template['name'];
+                    $laravelProduct->product_price = $mainVariant['list_price'];
+                    $laravelProduct->description = $template['description'] ?? '';
+                    $laravelProduct->meta_title = $template['name'];
+                    $laravelProduct->meta_keywords = $template['name'];
+                    $laravelProduct->meta_description = substr($template['description'] ?? '', 0, 160);
+                    $laravelProduct->category_id = $categoryId;
+                    $laravelProduct->section_id = $sectionId;
+
+                    // Сохранить картинку
+                    if (isset($template['image_1920']) && $template['image_1920'] && strlen($template['image_1920']) > 0) {
+                        $imageName = $this->saveProductImage($template['image_1920'], $productCode);
+                        if ($imageName) {
+                            $laravelProduct->product_image = $imageName;
+                            $imagesImported++;
+                        }
+                    }
+
+                    $laravelProduct->save();
+
+                    // Синхронизировать варианты (размеры) в products_attributes
+                    $variantsImported += $this->syncProductVariants($laravelProduct, $variants, $odoo);
+
+                } catch (\Exception $e) {
+                    $errors++;
+                    \Illuminate\Support\Facades\Log::error('Odoo Product Import Error', [
+                        'template_id' => $template['id'],
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // Деактивировать товары которых нет в Odoo (только если есть что проверять)
+            $deactivated = 0;
+            if (!empty($odooProductCodes)) {
+                $deactivated = Product::whereNotIn('product_code', $odooProductCodes)
+                    ->where('status', 1)
+                    ->where('product_code', '!=', '')
+                    ->whereNotNull('product_code')
+                    ->update(['status' => 0]);
+            }
+
+            $message = "Импорт завершен! Новых: {$imported}, Обновлено: {$updated}, Картинок: {$imagesImported}, Вариантов: {$variantsImported}, Деактивировано: {$deactivated}";
+            if ($errors > 0) {
+                $message .= ", Ошибок: {$errors}";
+            }
+
+            return redirect()->back()->with('success_message', $message);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error_message', 'Ошибка импорта: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Синхронизировать категории Odoo → Laravel
+     */
+    private function syncCategories($odooCategories) {
+        $mapping = [];
+        $odooCategoryNames = [];
+
+        foreach ($odooCategories as $odooCat) {
+            $categoryName = $odooCat['name'];
+            $odooCatId = $odooCat['id'];
+            $odooCategoryNames[] = $categoryName;
+
+            // Найти или создать категорию в Laravel
+            $laravelCategory = \App\Models\Category::where('category_name', $categoryName)->first();
+
+            if (!$laravelCategory) {
+                // Создать новую категорию
+                $laravelCategory = new \App\Models\Category();
+                $laravelCategory->parent_id = 0;
+                $laravelCategory->category_name = $categoryName;
+                $laravelCategory->section_id = 1;
+                $laravelCategory->category_image = '';
+                $laravelCategory->category_discount = 0;
+                $laravelCategory->description = '';
+                $laravelCategory->url = \Illuminate\Support\Str::slug($categoryName);
+                $laravelCategory->meta_title = $categoryName;
+                $laravelCategory->meta_description = '';
+                $laravelCategory->meta_keywords = '';
+                $laravelCategory->status = 1;
+                $laravelCategory->save();
+            } else {
+                // Активировать если была деактивирована
+                if ($laravelCategory->status == 0) {
+                    $laravelCategory->status = 1;
+                    $laravelCategory->save();
+                }
+            }
+
+            $mapping[$odooCatId] = [
+                'category_id' => $laravelCategory->id,
+                'section_id' => $laravelCategory->section_id,
+            ];
+        }
+
+        // Деактивировать категории которых нет в Odoo
+        \App\Models\Category::whereNotIn('category_name', $odooCategoryNames)
+            ->where('status', 1)
+            ->update(['status' => 0]);
+
+        return $mapping;
+    }
+
+    /**
+     * Синхронизировать варианты товара (размеры, цвета и т.д.)
+     */
+    private function syncProductVariants($laravelProduct, $odooVariants, $odoo) {
+        $synced = 0;
+        $odooSkus = [];
+
+        foreach ($odooVariants as $variant) {
+            // Определить размер из атрибутов
+            $size = 'Default';
+            $sku = $variant['default_code'] ?? $laravelProduct->product_code . '-' . $variant['id'];
+            $odooSkus[] = $sku;
+
+            // Получить атрибуты варианта
+            if (!empty($variant['product_template_attribute_value_ids'])) {
+                $attrValues = $odoo->getAttributeValues($variant['product_template_attribute_value_ids']);
+                $sizeNames = array_column($attrValues, 'name');
+                $size = implode(', ', $sizeNames);
+            }
+
+            // Найти или создать атрибут
+            $attribute = \App\Models\ProductsAttribute::where('product_id', $laravelProduct->id)
+                ->where('sku', $sku)
+                ->first();
+
+            if (!$attribute) {
+                $attribute = new \App\Models\ProductsAttribute();
+                $attribute->product_id = $laravelProduct->id;
+                $attribute->sku = $sku;
+                $synced++;
+            }
+
+            $attribute->size = $size;
+            $attribute->price = $variant['list_price'];
+            $attribute->stock = $variant['qty_available'] ?? 0;
+            $attribute->status = 1;
+            $attribute->save();
+        }
+
+        // Удалить варианты которых нет в Odoo
+        \App\Models\ProductsAttribute::where('product_id', $laravelProduct->id)
+            ->whereNotIn('sku', $odooSkus)
+            ->delete();
+
+        return $synced;
+    }
+
+    /**
+     * Сохранить картинку товара из base64
+     */
+    private function saveProductImage($base64Image, $productCode) {
+        try {
+            // Декодировать base64
+            $imageData = base64_decode($base64Image);
+
+            // Создать уникальное имя файла
+            $imageName = $productCode . '_' . time() . '.jpg';
+
+            // Пути к папкам (напрямую в public/)
+            $basePath = public_path('front/images/product_images/');
+            $largePath = $basePath . 'large/';
+            $mediumPath = $basePath . 'medium/';
+            $smallPath = $basePath . 'small/';
+
+            // Создать директории если не существуют
+            if (!file_exists($largePath))
+                mkdir($largePath, 0755, true);
+            if (!file_exists($mediumPath))
+                mkdir($mediumPath, 0755, true);
+            if (!file_exists($smallPath))
+                mkdir($smallPath, 0755, true);
+
+            // Сохранить оригинал (large)
+            file_put_contents($largePath . $imageName, $imageData);
+
+            // Создать ресайзы с помощью Intervention Image
+            $image = \Intervention\Image\Facades\Image::make($imageData);
+
+            // Medium: 520x600
+            $imageMedium = clone $image;
+            $imageMedium->resize(520, 600, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            $imageMedium->save($mediumPath . $imageName);
+
+            // Small: 265x305
+            $imageSmall = clone $image;
+            $imageSmall->resize(265, 305, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            $imageSmall->save($smallPath . $imageName);
+
+            return $imageName;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Image Save Error', [
+                'product_code' => $productCode,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 
     public function addEditProduct(Request $request, $id = null) { // If the $id is not passed, this means 'Add a Product', if not, this means 'Edit the Product'    
@@ -107,23 +390,23 @@ class ProductsController extends Controller
 
             // Laravel's Validation    // Customizing Laravel's Validation Error Messages: https://laravel.com/docs/9.x/validation#customizing-the-error-messages    // Customizing Validation Rules: https://laravel.com/docs/9.x/validation#custom-validation-rules
             $rules = [
-                'category_id'   => 'required',
-                'product_name'  => 'required', // only alphabetical characters and spaces
-                'product_code'  => 'required|regex:/^\w+$/', // alphanumeric regular expression
+                'category_id' => 'required',
+                'product_name' => 'required', // only alphabetical characters and spaces
+                'product_code' => 'required|regex:/^\w+$/', // alphanumeric regular expression
                 'product_price' => 'required|numeric',
                 'product_color' => 'required|regex:/^[\pL\s\-]+$/u', // only alphabetical characters and spaces
             ];
 
             $customMessages = [ // Specifying A Custom Message For A Given Attribute: https://laravel.com/docs/9.x/validation#specifying-a-custom-message-for-a-given-attribute
-                'category_id.required'   => 'Category is required',
-                'product_name.required'  => 'Product Name is required',
-                'product_name.regex'     => 'Valid Product Name is required',
-                'product_code.required'  => 'Product Code is required',
-                'product_code.regex'     => 'Valid Product Code is required',
+                'category_id.required' => 'Category is required',
+                'product_name.required' => 'Product Name is required',
+                'product_name.regex' => 'Valid Product Name is required',
+                'product_code.required' => 'Product Code is required',
+                'product_code.regex' => 'Valid Product Code is required',
                 'product_price.required' => 'Product Price is required',
-                'product_price.numeric'  => 'Valid Product Price is required',
+                'product_price.numeric' => 'Valid Product Price is required',
                 'product_color.required' => 'Product Color is required',
-                'product_color.regex'    => 'Valid Product Color is required',
+                'product_color.regex' => 'Valid Product Color is required',
 
             ];
 
@@ -143,15 +426,15 @@ class ProductsController extends Controller
 
                     // Assigning the uploaded images path inside the 'public' folder
                     // We will have three folders: small, medium and large, depending on the images sizes
-                    $largeImagePath  = 'front/images/product_images/large/'  . $imageName; // 'large'  images folder
+                    $largeImagePath = 'front/images/product_images/large/' . $imageName; // 'large'  images folder
                     $mediumImagePath = 'front/images/product_images/medium/' . $imageName; // 'medium' images folder
-                    $smallImagePath  = 'front/images/product_images/small/'  . $imageName; // 'small'  images folder
+                    $smallImagePath = 'front/images/product_images/small/' . $imageName; // 'small'  images folder
 
                     // Upload the image using the 'Intervention' package and save it in our THREE paths (folders) inside the 'public' folder
                     Image::make($image_tmp)->resize(1000, 1000)->save($largeImagePath);  // resize the 'large'  image size then store it in the 'large'  folder
-                    Image::make($image_tmp)->resize(500,   500)->save($mediumImagePath); // resize the 'medium' image size then store it in the 'medium' folder
-                    Image::make($image_tmp)->resize(250,   250)->save($smallImagePath);  // resize the 'small'  image size then store it in the 'small'  folder
-                
+                    Image::make($image_tmp)->resize(500, 500)->save($mediumImagePath); // resize the 'medium' image size then store it in the 'medium' folder
+                    Image::make($image_tmp)->resize(250, 250)->save($smallImagePath);  // resize the 'small'  image size then store it in the 'small'  folder
+
                     // Insert the image name in the database table
                     $product->product_image = $imageName;
                 }
@@ -165,8 +448,8 @@ class ProductsController extends Controller
 
                 if ($video_tmp->isValid()) { // Validating Successful Uploads: https://laravel.com/docs/9.x/requests#validating-successful-uploads
                     // Upload video
-                    $extension  = $video_tmp->getClientOriginalExtension();
-                    
+                    $extension = $video_tmp->getClientOriginalExtension();
+
                     // Generate a new random name for the uploaded video (to avoid that the video might get overwritten if its name is repeated)
                     $videoName = rand() . '.' . $extension; // e.g.    75935.mp4
 
@@ -186,12 +469,12 @@ class ProductsController extends Controller
             $categoryDetails = \App\Models\Category::find($data['category_id']); // Get the section from the submitted category
             // dd($categoryDetails);
 
-            $product->section_id  = $categoryDetails['section_id'];
+            $product->section_id = $categoryDetails['section_id'];
             $product->category_id = $data['category_id'];
-            $product->brand_id    = $data['brand_id'];
-            $product->group_code  = $data['group_code']; // Managing Product Colors (in front/products/detail.blade.php)
+            $product->brand_id = $data['brand_id'];
+            $product->group_code = $data['group_code']; // Managing Product Colors (in front/products/detail.blade.php)
 
-            
+
             // Saving the seleted filter for a product
             $productFilters = ProductsFilter::productFilters(); // Get ALL the (enabled/active) Filters
             foreach ($productFilters as $filter) { // get ALL the filters, then check if every filter's `filter_column` is submitted by the category_filters.blade.php page
@@ -213,13 +496,13 @@ class ProductsController extends Controller
                 $adminType = Auth::guard('admin')->user()->type; // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Get the `type` column value of the `admins` table through Retrieving The Authenticated User (the logged in user) using the 'admin' guard which we defined in auth.php page: https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
                 // dd($adminType);
                 $vendor_id = Auth::guard('admin')->user()->vendor_id; // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Get the `vendor_id` column value of the `admins` table through Retrieving The Authenticated User (the logged in user) using the 'admin' guard which we defined in auth.php page: https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
-                $admin_id  = Auth::guard('admin')->user()->id; // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Get the `id` column value of the `admins` table through Retrieving The Authenticated User (the logged in user) using the 'admin' guard which we defined in auth.php page: https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
+                $admin_id = Auth::guard('admin')->user()->id; // Accessing Specific Guard Instances: https://laravel.com/docs/9.x/authentication#accessing-specific-guard-instances    // Get the `id` column value of the `admins` table through Retrieving The Authenticated User (the logged in user) using the 'admin' guard which we defined in auth.php page: https://laravel.com/docs/9.x/authentication#retrieving-the-authenticated-user
 
                 $product->admin_type = $adminType;
-                $product->admin_id   = $admin_id;
+                $product->admin_id = $admin_id;
 
                 if ($adminType == 'vendor') {
-                    $product->vendor_id  = $vendor_id;
+                    $product->vendor_id = $vendor_id;
                 } else {
                     $product->vendor_id = 0;
                 }
@@ -235,16 +518,16 @@ class ProductsController extends Controller
             }
 
 
-            $product->product_name     = $data['product_name'];
-            $product->product_code     = $data['product_code'];
-            $product->product_color    = $data['product_color'];
-            $product->product_price    = $data['product_price'];
+            $product->product_name = $data['product_name'];
+            $product->product_code = $data['product_code'];
+            $product->product_color = $data['product_color'];
+            $product->product_price = $data['product_price'];
             $product->product_discount = $data['product_discount'];
-            $product->product_weight   = $data['product_weight'];
-            $product->description      = $data['description'];
-            $product->meta_title       = $data['meta_title'];
+            $product->product_weight = $data['product_weight'];
+            $product->description = $data['description'];
+            $product->meta_title = $data['meta_title'];
             $product->meta_description = $data['meta_description'];
-            $product->meta_keywords    = $data['meta_keywords'];
+            $product->meta_keywords = $data['meta_keywords'];
 
 
 
@@ -292,11 +575,11 @@ class ProductsController extends Controller
         // Get the product image record stored in the database
         $productImage = Product::select('product_image')->where('id', $id)->first();
         // dd($productImage);
-        
+
         // Get the product image three paths on the server (filesystem) ('small', 'medium' and 'large' folders)
-        $small_image_path  = 'front/images/product_images/small/';
+        $small_image_path = 'front/images/product_images/small/';
         $medium_image_path = 'front/images/product_images/medium/';
-        $large_image_path  = 'front/images/product_images/large/';
+        $large_image_path = 'front/images/product_images/large/';
 
         // Delete the product physical actual images on server (filesystem) (from the the THREE folders)
         // First: Delete from the 'small' folder
@@ -328,7 +611,7 @@ class ProductsController extends Controller
         // Get the product video record stored in the database
         $productVideo = Product::select('product_video')->where('id', $id)->first();
         // dd($productVideo);
-        
+
         // Get the product video path on the server (filesystem)
         $product_video_path = 'front/videos/product_videos/';
 
@@ -357,7 +640,7 @@ class ProductsController extends Controller
             foreach ($data['sku'] as $key => $value) { // or instead could be: $data['size'], $data['price'] or $data['stock']
                 // echo '<pre>', var_dump($key), '</pre>';
                 // echo '<pre>', var_dump($value), '</pre>';
-                
+
                 if (!empty($value)) {
                     // Validation:
                     // SKU duplicate check (Prevent duplicate SKU) because SKU is UNIQUE for every product
@@ -376,12 +659,12 @@ class ProductsController extends Controller
                     $attribute = new ProductsAttribute;
 
                     $attribute->product_id = $id; // $id is passed in up there to the addAttributes() method
-                    $attribute->sku        = $value;
-                    $attribute->size       = $data['size'][$key];  // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['size'][0]
-                    $attribute->price      = $data['price'][$key]; // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['price'][0]
-                    $attribute->stock      = $data['stock'][$key]; // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['stock'][0]
-                    $attribute->status     = 1;
-                    
+                    $attribute->sku = $value;
+                    $attribute->size = $data['size'][$key];  // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['size'][0]
+                    $attribute->price = $data['price'][$key]; // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['price'][0]
+                    $attribute->stock = $data['stock'][$key]; // $key denotes the iteration/loop cycle number (0, 1, 2, ...), e.g. $data['stock'][0]
+                    $attribute->status = 1;
+
                     $attribute->save();
                 }
             }
@@ -407,7 +690,7 @@ class ProductsController extends Controller
             ProductsAttribute::where('id', $data['attribute_id'])->update(['status' => $status]); // $data['attribute_id'] comes from the 'data' object inside the $.ajax() method
 
             return response()->json([ // JSON Responses: https://laravel.com/docs/9.x/responses#json-responses
-                'status'       => $status,
+                'status' => $status,
                 'attribute_id' => $data['attribute_id']
             ]);
         }
@@ -425,9 +708,9 @@ class ProductsController extends Controller
                     ProductsAttribute::where([
                         'id' => $data['attributeId'][$key]
                     ])->update([
-                        'price' => $data['price'][$key],
-                        'stock' => $data['stock'][$key]
-                    ]);
+                                'price' => $data['price'][$key],
+                                'stock' => $data['stock'][$key]
+                            ]);
                 }
             }
 
@@ -466,21 +749,21 @@ class ProductsController extends Controller
 
                     // Assigning the uploaded images path inside the 'public' folder
                     // We will have three folders: small, medium and large, depending on the images sizes
-                    $largeImagePath  = 'front/images/product_images/large/'  . $imageName; // 'large'  images folder
+                    $largeImagePath = 'front/images/product_images/large/' . $imageName; // 'large'  images folder
                     $mediumImagePath = 'front/images/product_images/medium/' . $imageName; // 'medium' images folder
-                    $smallImagePath  = 'front/images/product_images/small/'  . $imageName; // 'small'  images folder
+                    $smallImagePath = 'front/images/product_images/small/' . $imageName; // 'small'  images folder
 
                     // Upload the image using the 'Intervention' package and save it in our THREE paths (folders) inside the 'public' folder
                     Image::make($image_tmp)->resize(1000, 1000)->save($largeImagePath);  // resize the 'large'  image size then store it in the 'large'  folder
-                    Image::make($image_tmp)->resize(500,   500)->save($mediumImagePath); // resize the 'medium' image size then store it in the 'medium' folder
-                    Image::make($image_tmp)->resize(250,   250)->save($smallImagePath);  // resize the 'small'  image size then store it in the 'small'  folder
-                
+                    Image::make($image_tmp)->resize(500, 500)->save($mediumImagePath); // resize the 'medium' image size then store it in the 'medium' folder
+                    Image::make($image_tmp)->resize(250, 250)->save($smallImagePath);  // resize the 'small'  image size then store it in the 'small'  folder
+
                     // Insert the image name in the database table `products_images`
                     $image = new ProductsImage;
 
-                    $image->image      = $imageName;
+                    $image->image = $imageName;
                     $image->product_id = $id;
-                    $image->status     = 1;
+                    $image->status = 1;
 
                     $image->save();
                 }
@@ -508,7 +791,7 @@ class ProductsController extends Controller
             ProductsImage::where('id', $data['image_id'])->update(['status' => $status]); // $data['image_id'] comes from the 'data' object inside the $.ajax() method
 
             return response()->json([ // JSON Responses: https://laravel.com/docs/9.x/responses#json-responses
-                'status'   => $status,
+                'status' => $status,
                 'image_id' => $data['image_id']
             ]);
         }
@@ -518,11 +801,11 @@ class ProductsController extends Controller
         // Get the product image record stored in the database
         $productImage = ProductsImage::select('image')->where('id', $id)->first();
         // dd($productImage);
-        
+
         // Get the product image three paths on the server (filesystem) ('small', 'medium' and 'large' folders)
-        $small_image_path  = 'front/images/product_images/small/';
+        $small_image_path = 'front/images/product_images/small/';
         $medium_image_path = 'front/images/product_images/medium/';
-        $large_image_path  = 'front/images/product_images/large/';
+        $large_image_path = 'front/images/product_images/large/';
 
         // Delete the product images on server (filesystem) (from the the THREE folders)
         // First: Delete from the 'small' folder
